@@ -10,6 +10,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 
+import android.net.Uri;
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
 import org.json.JSONException;
@@ -40,24 +41,30 @@ public class Zip extends CordovaPlugin {
     private void unzipSync(CordovaArgs args, CallbackContext callbackContext) {
         try {
             String zipFileName = args.getString(0);
-            zipFileName = getFilePathFromPath(zipFileName);
             String outputDirectory = args.getString(1);
-            outputDirectory = getFilePathFromPath(outputDirectory);
-            outputDirectory += outputDirectory.endsWith(File.separator) ? "" : File.separator;
 
-            String tempDir = getFilePathFromPath(zipFileName);
-            File tempFile = new File(tempDir);
-            boolean ex = tempFile.exists();
-            if(!ex) {
-                Log.e(LOG_TAG, "Doesn't exist");
+            // Since Cordova 3.3.0 and release of File plugins, files are accessed via cdvfile://
+            // Accept a path or a URI for the source zip.
+            Uri zipUri = getUriForArg(zipFileName);
+
+            // Same for target directory
+            Uri outputUri = getUriForArg(outputDirectory);
+
+            CordovaResourceApi resourceApi = webView.getResourceApi();
+
+            File tempFile = resourceApi.mapUriToFile(zipUri);
+            if(tempFile == null || !tempFile.exists()) {
+                Log.e(LOG_TAG, "Zip file does not exist");
             }
 
-            File outputDir = new File(outputDirectory);
-            if(!outputDir.exists() && !outputDir.mkdirs()){
+            File outputDir = resourceApi.mapUriToFile(outputUri);
+            outputDirectory = outputDir.getAbsolutePath();
+            outputDirectory += outputDirectory.endsWith(File.separator) ? "" : File.separator;
+            if(outputDir == null || (!outputDir.exists() && !outputDir.mkdirs())){
                 throw new FileNotFoundException("File: \"" + outputDirectory + "\" not found");
             }
 
-            InputStream is = new FileInputStream(zipFileName);
+            InputStream is = resourceApi.openForRead(zipUri).inputStream;
 
             if (zipFileName.endsWith("crx")) {
                 // CRX files contain a header. This header consists of:
@@ -99,6 +106,7 @@ public class Zip extends CordovaPlugin {
                    dir.mkdirs();
                 } else {
                     File file = new File(outputDirectory + compressedName);
+                    file.getParentFile().mkdirs();
                     if(file.exists() || file.createNewFile()){
                         FileOutputStream fout = new FileOutputStream(file);
                         int count;
@@ -124,13 +132,10 @@ public class Zip extends CordovaPlugin {
         }
     }
 
-    private String getFilePathFromPath(String path) {
-        String prefix = "file://";
-
-        if (path.startsWith(prefix)) {
-            return path.substring(prefix.length());
-        } else {
-            return path;
-        }
+    private Uri getUriForArg(String arg) {
+        CordovaResourceApi resourceApi = webView.getResourceApi();
+        Uri tmpTarget = Uri.parse(arg);
+        return resourceApi.remapUri(
+                tmpTarget.getScheme() != null ? tmpTarget : Uri.fromFile(new File(arg)));
     }
 }
