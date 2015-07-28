@@ -1,7 +1,7 @@
-var SimpleCZip = function() {
+var Zip = function() {
 };
 
-SimpleCZip.prototype.unzip = function(fileName, outputDirectory, callback) {
+Zip.prototype.unzip = function(fileName, outputDirectory, callback) {
     var win = function() {
     	if (callback) {
             callback(0);
@@ -15,4 +15,4 @@ SimpleCZip.prototype.unzip = function(fileName, outputDirectory, callback) {
     cordova.exec(win, fail, 'Zip', 'unzip', [fileName, outputDirectory]);
 };
 
-module.exports = new SimpleCZip();
+module.exports = new Zip();
