@@ -1,11 +1,18 @@
-var exec = cordova.require('cordova/exec');
-
-exports.unzip = function(fileName, outputDirectory, callback) {
-    var win = callback && function() {
-        callback(0);
-    };
-    var fail = callback && function() {
-        callback(-1);
-    };
-    exec(win, fail, 'Zip', 'unzip', [fileName, outputDirectory]);
+var SimpleCZip = function() {
 };
+
+SimpleCZip.prototype.unzip = function(fileName, outputDirectory, callback) {
+    var win = function() {
+    	if (callback) {
+            callback(0);
+    	}
+    };
+    var fail = function() {
+    	if (callback) {
+            callback(-1);
+    	}
+    };
+    cordova.exec(win, fail, 'Zip', 'unzip', [fileName, outputDirectory]);
+};
+
+module.exports = new SimpleCZip();
